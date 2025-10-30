@@ -1,8 +1,8 @@
 <?php
 /*
-Plugin Name: URL Condition for Elementor Widgets
-Description: Adds a simple conditional display logic to Elementor widgets based on a URL query variable.
-Version: 1.0.0
+Plugin Name: Elementor URL Condition
+Description: Adds a simple conditional display logic to Elementor widgets based on a URL query variable, with debug output.
+Version: 1.0.1
 Author: AI Assistant
 Requires Plugin: elementor
 */
@@ -17,17 +17,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Simple_Elementor_URL_Condition {
 
     protected $is_element_hidden = [];
+    protected $debug_data = [];
 
     public function __construct() {
-        // Only proceed if Elementor is available
         if ( ! defined( 'ELEMENTOR_VERSION' ) ) {
             return;
         }
         
-        // 1. Register Admin Controls for various Elementor elements
         $this->register_admin_hooks();
-        
-        // 2. Register Public Hooks to apply condition on front-end
         $this->register_public_hooks();
     }
 
@@ -121,47 +118,87 @@ class Simple_Elementor_URL_Condition {
                 ],
             ]
         );
+        
+        $element->add_control(
+            'url_condition_debug',
+            [
+                'label' => 'Debug Mode',
+                'type' => \Elementor\Controls_Manager::SWITCHER,
+                'label_on' => 'On',
+                'label_off' => 'Off',
+                'return_value' => 'yes',
+                'default' => '',
+                'separator' => 'before',
+                'description' => 'Outputs a detailed HTML comment on the front-end showing the condition check.',
+                'condition' => [
+                    'url_condition_enable' => 'yes',
+                ],
+            ]
+        );
 
         $element->end_controls_section();
     }
 
     /**
-     * Checks the URL condition based on element settings.
+     * Checks the URL condition and returns the decision along with debug data.
      *
      * @param array $settings The Elementor element settings.
-     * @return bool True if the element should be hidden, false otherwise.
+     * @param string $element_id The element's unique ID.
+     * @return array [$should_hide, $debug_data]
      */
-    private function check_condition( $settings ) {
-        // 1. Check if feature is enabled
-        if ( empty( $settings['url_condition_enable'] ) || $settings['url_condition_enable'] !== 'yes' ) {
-            return false;
-        }
-
+    private function check_condition( $settings, $element_id ) {
+        
+        $enabled = $settings['url_condition_enable'] ?? '';
         $variable = sanitize_text_field( $settings['url_condition_variable'] ?? '' );
         $expected_value = sanitize_text_field( $settings['url_condition_value'] ?? '' );
         $action = sanitize_text_field( $settings['url_condition_action'] ?? 'show' );
-
-        if ( empty( $variable ) ) {
-            return false;
-        }
-
-        $condition_met = false;
+        $debug_mode = $settings['url_condition_debug'] ?? '';
+        
         $should_hide = false;
-
-        // 2. Perform the URL query check
+        $condition_met = false;
+        $actual_value = 'N/A (Variable Missing)';
+        
+        // Setup initial debug data
+        $debug_data = [
+            'ID' => $element_id,
+            'Enabled' => ( $enabled === 'yes' ? 'Yes' : 'No' ),
+            'Variable' => $variable,
+            'Expected' => ( empty($expected_value) ? 'Any non-empty value (Presence Check)' : $expected_value ),
+            'Action' => $action,
+            'Actual' => 'N/A',
+            'URL_Contains_Variable' => 'No',
+            'ConditionMet' => 'No',
+            'FinalDecision' => 'Visible',
+        ];
+        
+        if ( $enabled !== 'yes' || empty( $variable ) ) {
+            return [ $should_hide, $debug_data ];
+        }
+        
+        // Perform the URL query check
         if ( isset( $_GET[ $variable ] ) ) {
+            $debug_data['URL_Contains_Variable'] = 'Yes';
             $actual_value = sanitize_text_field( wp_unslash( $_GET[ $variable ] ) );
+            $debug_data['Actual'] = $actual_value;
 
             if ( empty( $expected_value ) ) {
-                // Check for presence only (e.g., ?source)
-                $condition_met = true;
+                // Condition met if parameter is just present (e.g., ?source) and not empty
+                if ( ! empty( $actual_value ) ) {
+                    $condition_met = true;
+                }
             } else {
                 // Check for value match (case-insensitive)
-                $condition_met = ( strtolower( $actual_value ) === strtolower( $expected_value ) );
+                if ( strtolower( $actual_value ) === strtolower( $expected_value ) ) {
+                    $condition_met = true;
+                }
             }
         }
         
-        // 3. Determine final action
+        if ( $condition_met ) {
+            $debug_data['ConditionMet'] = 'Yes';
+        }
+
+        // Determine final action
         if ( $action === 'show' ) {
             // "Show when met": Hide it if the condition is NOT met
             if ( ! $condition_met ) {
@@ -173,8 +210,34 @@ class Simple_Elementor_URL_Condition {
                 $should_hide = true;
             }
         }
+        
+        if ( $should_hide ) {
+            $debug_data['FinalDecision'] = 'Hidden';
+        }
 
-        return $should_hide;
+        return [ $should_hide, $debug_data, $debug_mode ];
+    }
+
+    /**
+     * Helper function to generate the debug output comment.
+     */
+    private function generate_debug_output( $debug_data, $element_type_name ) {
+        if ( empty( $debug_data ) || $debug_data['Enabled'] === 'No' ) {
+            return '';
+        }
+        
+        $output = "\n\n";
+        $output .= "\n";
+        $output .= "\n";
+        $output .= "\n";
+        $output .= "\n";
+        $output .= "\n";
+        $output .= "\n";
+        $output .= "\n";
+        $output .= "\n";
+        $output .= "\n";
+        
+        return $output;
     }
 
 
@@ -182,37 +245,55 @@ class Simple_Elementor_URL_Condition {
      * Before render, check condition and start output buffering if hidden.
      */
     public function filter_element_content_before( $element ) {
-        if ( \Elementor\Plugin::$instance->editor->is_edit_mode() || \Elementor\Plugin::$instance->preview->is_preview_mode() ) {
-            // Do not hide in the editor or preview
+        // Do not hide or run heavy checks in the editor/preview mode
+        if ( class_exists('\Elementor\Plugin') && (\Elementor\Plugin::$instance->editor->is_edit_mode() || \Elementor\Plugin::$instance->preview->is_preview_mode()) ) {
             return;
         }
 
         $settings = $element->get_settings_for_display();
         $element_id = $element->get_id();
 
-        if ( $this->check_condition( $settings ) ) {
+        list($should_hide, $debug_data, $debug_mode) = $this->check_condition( $settings, $element_id );
+        
+        // Store debug data regardless of outcome, as it is needed later
+        if ( $debug_mode === 'yes' ) {
+            $this->debug_data[ $element_id ] = $debug_data;
+        }
+
+        if ( $should_hide ) {
             $this->is_element_hidden[ $element_id ] = true;
             ob_start(); // Start capturing output
         }
     }
 
     /**
-     * After render, if hidden, discard the buffered output.
+     * After render, if hidden, discard the buffered output and display debug if necessary.
      */
     public function filter_element_content_after( $element ) {
         $element_id = $element->get_id();
+        $element_type_name = $element->get_name();
+
+        $debug_output = $this->generate_debug_output( $this->debug_data[ $element_id ] ?? [], $element_type_name );
         
-        if ( empty( $this->is_element_hidden[ $element_id ] ) ) {
-            return;
+        // Check if the element was hidden in the 'before' action
+        if ( ! empty( $this->is_element_hidden[ $element_id ] ) ) {
+            // Element was hidden: Discard output, print debug (if enabled), and a simple hidden comment
+            ob_end_clean();
+            
+            // Print debug output even when hidden, so the user can see *why* it was hidden
+            echo $debug_output; 
+            echo '';
+            
+            unset( $this->is_element_hidden[ $element_id ] );
+        } else {
+            // Element was visible: Just print debug output (if enabled)
+            echo $debug_output;
         }
 
-        // Discard the buffered output, effectively removing the element from the source code
-        ob_end_clean();
-        
-        // Add a minimal HTML comment for debugging/visibility confirmation
-        echo '';
-
-        unset( $this->is_element_hidden[ $element_id ] );
+        // Clean up debug data storage
+        if ( isset( $this->debug_data[ $element_id ] ) ) {
+            unset( $this->debug_data[ $element_id ] );
+        }
     }
 }
 
