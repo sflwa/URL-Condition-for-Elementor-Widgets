@@ -1,6 +1,6 @@
 === URL Condition for Elementor Widgets ===
 Contributors: sflwa
-Tags: elementor, condition, url, query, visibility, cache
+Tags: elementor, conditions
 Requires at least: 6.7
 Tested up to: 6.8
 Stable tag: 1.0.6
