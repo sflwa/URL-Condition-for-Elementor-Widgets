@@ -18,9 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Main URL Condition Class to integrate with Elementor.
+ * Main core class for the plugin.
  */
-class Simple_Elementor_URL_Condition {
+class Sflwa_Urlc_Core {
 
     protected $is_element_hidden = [];
 
@@ -47,6 +47,7 @@ class Simple_Elementor_URL_Condition {
     private function register_public_hooks() {
         // Hooks to apply conditional logic on the front-end
         add_action( 'elementor/frontend/widget/before_render', [ $this, 'filter_element_content_before' ], 10, 1 );
+        $this->is_element_hidden = [];
         add_action( 'elementor/frontend/widget/after_render', [ $this, 'filter_element_content_after' ], 10, 1 );
         add_action( 'elementor/frontend/section/before_render', [ $this, 'filter_element_content_before' ], 10, 1 );
         add_action( 'elementor/frontend/section/after_render', [ $this, 'filter_element_content_after' ], 10, 1 );
@@ -134,7 +135,7 @@ class Simple_Elementor_URL_Condition {
      *
      * @return bool True if the element should be hidden, false otherwise.
      */
-    private function check_condition( $settings ) {
+    public function check_condition( $settings ) {
         
         $enabled = $settings['url_condition_enable'] ?? '';
         
@@ -244,7 +245,14 @@ class Simple_Elementor_URL_Condition {
     }
 }
 
+/**
+ * Prefix wrapper function to instantiate the core class.
+ */
+if ( ! function_exists( 'sflwa_urlc_init' ) ) {
+    function sflwa_urlc_init() {
+        new Sflwa_Urlc_Core();
+    }
+}
+
 // Instantiate the class after Elementor is loaded.
-add_action( 'elementor/init', function() {
-    new Simple_Elementor_URL_Condition();
-} );
+add_action( 'elementor/init', 'sflwa_urlc_init' );
