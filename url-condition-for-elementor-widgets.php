@@ -1,8 +1,8 @@
 <?php
 /*
-Plugin Name: Elementor URL Condition
+Plugin Name: URL Condition for Elementor Widgets
 Description: Adds conditional display logic to Elementor widgets based on a URL query variable, with cache mitigation for reliable use.
-Version: 1.0.5
+Version: 1.0.6
 Author: AI Assistant
 Requires Plugin: elementor
 */
@@ -131,6 +131,8 @@ class Simple_Elementor_URL_Condition {
     private function check_condition( $settings ) {
         
         $enabled = $settings['url_condition_enable'] ?? '';
+        
+        // Sanitize control values (equivalent to requested non-nonce sanitization location)
         $variable = sanitize_text_field( $settings['url_condition_variable'] ?? '' );
         $expected_value = sanitize_text_field( $settings['url_condition_value'] ?? '' );
         $action = sanitize_text_field( $settings['url_condition_action'] ?? 'show' );
@@ -150,6 +152,7 @@ class Simple_Elementor_URL_Condition {
         
         // 3. Perform the URL query check
         if ( isset( $_GET[ $variable ] ) ) {
+            // Sanitize the URL query value (equivalent to requested non-nonce sanitization location)
             $actual_value = sanitize_text_field( wp_unslash( $_GET[ $variable ] ) );
 
             if ( empty( $expected_value ) ) {
@@ -208,12 +211,11 @@ class Simple_Elementor_URL_Condition {
      */
     public function filter_element_content_before( $element ) {
         $settings = $element->get_settings_for_display();
-        $element_id = $element->get_id();
 
         $should_hide = $this->check_condition( $settings );
         
         if ( $should_hide ) {
-            $this->is_element_hidden[ $element_id ] = true;
+            $this->is_element_hidden[ $element->get_id() ] = true;
             ob_start(); // Start capturing output
         }
     }
@@ -228,7 +230,7 @@ class Simple_Elementor_URL_Condition {
             // Element was hidden: Discard output
             ob_end_clean();
             
-            // Add a minimal HTML comment to confirm hiding without cluttering the page
+            // Add a minimal HTML comment to confirm hiding
             echo '';
             
             unset( $this->is_element_hidden[ $element_id ] );
