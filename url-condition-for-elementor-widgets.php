@@ -2,7 +2,7 @@
 /*
 Plugin Name: Elementor URL Condition
 Description: Adds a simple conditional display logic to Elementor widgets based on a URL query variable, with debug output.
-Version: 1.0.1
+Version: 1.0.2
 Author: AI Assistant
 Requires Plugin: elementor
 */
@@ -144,7 +144,7 @@ class Simple_Elementor_URL_Condition {
      *
      * @param array $settings The Elementor element settings.
      * @param string $element_id The element's unique ID.
-     * @return array [$should_hide, $debug_data]
+     * @return array [$should_hide, $debug_data, $debug_mode]
      */
     private function check_condition( $settings, $element_id ) {
         
@@ -158,7 +158,7 @@ class Simple_Elementor_URL_Condition {
         $condition_met = false;
         $actual_value = 'N/A (Variable Missing)';
         
-        // Setup initial debug data
+        // Setup initial/default debug data
         $debug_data = [
             'ID' => $element_id,
             'Enabled' => ( $enabled === 'yes' ? 'Yes' : 'No' ),
@@ -171,11 +171,12 @@ class Simple_Elementor_URL_Condition {
             'FinalDecision' => 'Visible',
         ];
         
+        // FIX: Ensure an early exit returns all three expected values.
         if ( $enabled !== 'yes' || empty( $variable ) ) {
-            return [ $should_hide, $debug_data ];
+            return [ $should_hide, $debug_data, $debug_mode ];
         }
         
-        // Perform the URL query check
+        // 2. Perform the URL query check
         if ( isset( $_GET[ $variable ] ) ) {
             $debug_data['URL_Contains_Variable'] = 'Yes';
             $actual_value = sanitize_text_field( wp_unslash( $_GET[ $variable ] ) );
@@ -194,11 +195,11 @@ class Simple_Elementor_URL_Condition {
             }
         }
         
+        // 3. Determine final action
         if ( $condition_met ) {
             $debug_data['ConditionMet'] = 'Yes';
         }
 
-        // Determine final action
         if ( $action === 'show' ) {
             // "Show when met": Hide it if the condition is NOT met
             if ( ! $condition_met ) {
@@ -215,8 +216,10 @@ class Simple_Elementor_URL_Condition {
             $debug_data['FinalDecision'] = 'Hidden';
         }
 
+        // Final return of all three expected values
         return [ $should_hide, $debug_data, $debug_mode ];
     }
+
 
     /**
      * Helper function to generate the debug output comment.
@@ -253,6 +256,7 @@ class Simple_Elementor_URL_Condition {
         $settings = $element->get_settings_for_display();
         $element_id = $element->get_id();
 
+        // Line 256: This call now correctly expects 3 arguments from check_condition
         list($should_hide, $debug_data, $debug_mode) = $this->check_condition( $settings, $element_id );
         
         // Store debug data regardless of outcome, as it is needed later
