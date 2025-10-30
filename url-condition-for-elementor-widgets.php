@@ -1,11 +1,17 @@
 <?php
-/*
-Plugin Name: URL Condition for Elementor Widgets
-Description: Adds conditional display logic to Elementor widgets based on a URL query variable, with cache mitigation for reliable use.
-Version: 1.0.6
-Author: AI Assistant
-Requires Plugin: elementor
-*/
+/**
+ * Plugin Name: URL Condition for Elementor Widgets
+ * Description: Adds conditional display logic to Elementor widgets based on a URL query variable, with cache mitigation for reliable use.
+ * Version: 1.0.6
+ * Author: South Florida Web Advisors
+ * Author URI: https://sflwa.net
+ * License: GPLv2 or later
+ * Requires at least: 6.7
+ * Tested up to: 6.8
+ * Stable tag: 1.0.6
+ * Text Domain: url-condition-for-elementor-widgets
+ * Requires Plugin: elementor
+ */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly.
@@ -132,7 +138,7 @@ class Simple_Elementor_URL_Condition {
         
         $enabled = $settings['url_condition_enable'] ?? '';
         
-        // Sanitize control values (equivalent to requested non-nonce sanitization location)
+        // Sanitize control values 
         $variable = sanitize_text_field( $settings['url_condition_variable'] ?? '' );
         $expected_value = sanitize_text_field( $settings['url_condition_value'] ?? '' );
         $action = sanitize_text_field( $settings['url_condition_action'] ?? 'show' );
@@ -152,7 +158,7 @@ class Simple_Elementor_URL_Condition {
         
         // 3. Perform the URL query check
         if ( isset( $_GET[ $variable ] ) ) {
-            // Sanitize the URL query value (equivalent to requested non-nonce sanitization location)
+            // Sanitize the URL query value 
             $actual_value = sanitize_text_field( wp_unslash( $_GET[ $variable ] ) );
 
             if ( empty( $expected_value ) ) {
